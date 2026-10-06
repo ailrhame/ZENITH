@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace = "com.zenith.app"
+    namespace = "com.zen.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -37,7 +37,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.zenith.app"
+        applicationId = "com.zen.app"
         minSdk = 24
         targetSdk = 33
         versionCode = flutterVersionCode.toInteger()
