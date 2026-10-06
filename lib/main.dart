@@ -240,7 +240,10 @@ class Engine {
         if (sk.any((s) => s == u || s.contains(u) || u.contains(s))) hit++;
       }
       final score = hit / uk.length;
-      if (score > bestScore) { bestScore = score; best = item; }
+      if (score > bestScore) {
+        bestScore = score;
+        best = item;
+      }
     }
     if (best != null && bestScore >= 0.4) return best.answer;
     return null;
@@ -248,7 +251,7 @@ class Engine {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// STORE — persistence
+// STORE
 // ═══════════════════════════════════════════════════════════════
 class ZenithStore {
   final SharedPreferences prefs;
@@ -279,7 +282,11 @@ class ZenithStore {
 
     final kb = p.getString('z_engine');
     if (kb != null) {
-      try { s.engine.load(jsonDecode(kb) as List); } catch (_) { s.engine.seed(); }
+      try {
+        s.engine.load(jsonDecode(kb) as List);
+      } catch (_) {
+        s.engine.seed();
+      }
     } else {
       s.engine.seed();
     }
@@ -327,7 +334,8 @@ class ZenithStore {
 class ZenithApp extends StatefulWidget {
   final ZenithStore store;
   const ZenithApp({super.key, required this.store});
-  @override State<ZenithApp> createState() => _ZenithAppState();
+  @override
+  State<ZenithApp> createState() => _ZenithAppState();
 }
 
 class _ZenithAppState extends State<ZenithApp> {
@@ -348,7 +356,8 @@ class _ZenithAppState extends State<ZenithApp> {
         ),
       ),
       builder: (ctx, child) => Directionality(
-        textDirection: TextDirection.rtl, child: child!,
+        textDirection: TextDirection.rtl,
+        child: child!,
       ),
       home: ChatPage(store: s, onChanged: () => setState(() {})),
     );
@@ -362,7 +371,8 @@ class ChatPage extends StatefulWidget {
   final ZenithStore store;
   final VoidCallback onChanged;
   const ChatPage({super.key, required this.store, required this.onChanged});
-  @override State<ChatPage> createState() => _ChatPageState();
+  @override
+  State<ChatPage> createState() => _ChatPageState();
 }
 
 class _ChatPageState extends State<ChatPage> {
@@ -381,8 +391,11 @@ class _ChatPageState extends State<ChatPage> {
   void _scrollBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
-        _scroll.animateTo(_scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -392,7 +405,8 @@ class _ChatPageState extends State<ChatPage> {
     if (text.isEmpty) return;
 
     s.messages.add({
-      'sender': 'user', 'text': text,
+      'sender': 'user',
+      'text': text,
       'ts': DateTime.now().millisecondsSinceEpoch,
     });
     _input.clear();
@@ -402,39 +416,48 @@ class _ChatPageState extends State<ChatPage> {
     await Future.delayed(const Duration(milliseconds: 400));
 
     String? reply;
-    // small talk
     final n = text.replaceAll('أ', 'ا').replaceAll('ة', 'ه');
-    if (n.contains('السلام عليكم')) reply = 'وعليكم السلام ورحمة الله وبركاته! 😊';
-    else if (n.contains('شكرا')) reply = 'العفو! 💖';
-    else if (n.contains('اسمي') || n.contains('اتصل بي')) {
+
+    if (n.contains('السلام عليكم')) {
+      reply = 'وعليكم السلام ورحمة الله وبركاته! 😊';
+    } else if (n.contains('شكرا')) {
+      reply = 'العفو! 💖';
+    } else if (n.contains('اسمي') || n.contains('اتصل بي')) {
       final name = text.replaceAll(RegExp(r'اسمي|اتصل بي'), '').trim();
       if (name.isNotEmpty) {
         s.userMemory['name'] = name;
         reply = 'تشرفت بمعرفتك يا $name! 😊';
       }
     } else if (n.contains('ماذا تعرف عني')) {
-      if (s.userMemory.isEmpty) reply = 'لا أعرف شيئاً عنك بعد.';
-      else reply = 'أعرف: ${s.userMemory.entries.map((e) => '${e.key}=${e.value}').join(', ')}';
+      if (s.userMemory.isEmpty) {
+        reply = 'لا أعرف شيئاً عنك بعد.';
+      } else {
+        reply = 'أعرف: ${s.userMemory.entries.map((e) => '${e.key}=${e.value}').join(', ')}';
+      }
     } else {
-      reply = s.engine.find(text);
+      final teach = RegExp(r'تعلّم:\s*(.+?)\s*=\s*(.+)').firstMatch(text);
+      if (teach != null) {
+        s.engine.addQA(teach.group(1)!.trim(), teach.group(2)!.trim());
+        reply = '✅ تم الحفظ!';
+      } else {
+        reply = s.engine.find(text);
+      }
     }
 
     if (reply == null) {
       reply = 'آسف، ما عندي جواب 🤔 علّمني: اكتب "تعلّم: [السؤال] = [الجواب]"';
     }
 
-    // teaching
-    final teach = RegExp(r'تعلّم:\s*(.+?)\s*=\s*(.+)').firstMatch(text);
-    if (teach != null) {
-      s.engine.addQA(teach.group(1)!.trim(), teach.group(2)!.trim());
-      reply = '✅ تم الحفظ!';
-    }
-
     s.questions++;
     s.xp += 5;
-    if (s.xp >= s.level * 100) { s.level++; s.xp = 0; }
+    if (s.xp >= s.level * 100) {
+      s.level++;
+      s.xp = 0;
+    }
+
     s.messages.add({
-      'sender': 'bot', 'text': reply,
+      'sender': 'bot',
+      'text': reply,
       'ts': DateTime.now().millisecondsSinceEpoch,
     });
     await s.save();
@@ -449,73 +472,104 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       backgroundColor: t.bg,
       body: SafeArea(
-        child: Column(children: [
-          _topBar(t),
-          _statsBar(t),
-          Expanded(child: _chatList(t)),
-          _composer(t),
-        ]),
+        child: Column(
+          children: [
+            _topBar(t),
+            _statsBar(t),
+            Expanded(child: _chatList(t)),
+            _composer(t),
+          ],
+        ),
       ),
     );
   }
 
   Widget _topBar(ZTheme t) => Container(
-    height: 56,
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    decoration: BoxDecoration(
-      color: t.surface,
-      border: Border(bottom: BorderSide(color: t.border)),
-    ),
-    child: Row(children: [
-      Container(
-        width: 36, height: 36,
+        height: 56,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(colors: [t.primary2, t.primary]),
+          color: t.surface,
+          border: Border(bottom: BorderSide(color: t.border)),
         ),
-        child: const Icon(Icons.star, color: Colors.white, size: 18),
-      ),
-      const SizedBox(width: 12),
-      Expanded(child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text('ZENITH', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: t.text)),
-          const SizedBox(height: 2),
-          Row(children: [
-            Container(width: 7, height: 7, decoration: BoxDecoration(color: t.online, shape: BoxShape.circle)),
-            const SizedBox(width: 5),
-            Text('متصل الآن', style: TextStyle(fontSize: 11, color: t.textDim)),
-          ]),
-        ],
-      )),
-      InkWell(
-        onTap: _openSettings,
-        borderRadius: BorderRadius.circular(50),
-        child: Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(color: t.surface2.withValues(alpha: 0.5), shape: BoxShape.circle),
-          child: Icon(Icons.more_vert, color: t.text, size: 18),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(colors: [t.primary2, t.primary]),
+              ),
+              child: const Icon(Icons.star, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('ZENITH',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: t.text)),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                            color: t.online, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 5),
+                      Text('متصل الآن',
+                          style: TextStyle(fontSize: 11, color: t.textDim)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            InkWell(
+              onTap: _openSettings,
+              borderRadius: BorderRadius.circular(50),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: t.surface2.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.more_vert, color: t.text, size: 18),
+              ),
+            ),
+          ],
         ),
-      ),
-    ]),
-  );
+      );
 
   Widget _statsBar(ZTheme t) {
     Widget chip(IconData i, Color c, String text) => Container(
-      margin: const EdgeInsets.only(left: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: t.surface2.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: t.border),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(i, size: 13, color: c),
-        const SizedBox(width: 6),
-        Text(text, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: t.text)),
-      ]),
-    );
+          margin: const EdgeInsets.only(left: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: t.surface2.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: t.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(i, size: 13, color: c),
+              const SizedBox(width: 6),
+              Text(text,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: t.text)),
+            ],
+          ),
+        );
+
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -525,30 +579,36 @@ class _ChatPageState extends State<ChatPage> {
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(children: [
-          chip(Icons.star, t.primary2, '${s.xp} XP'),
-          chip(Icons.monetization_on, Color(0xFFFFB84D), '${s.coins}'),
-          chip(Icons.workspace_premium, t.primary2, 'LEVEL ${s.level}'),
-        ]),
+        child: Row(
+          children: [
+            chip(Icons.star, t.primary2, '${s.xp} XP'),
+            chip(Icons.monetization_on, const Color(0xFFFFB84D), '${s.coins}'),
+            chip(Icons.workspace_premium, t.primary2, 'LEVEL ${s.level}'),
+          ],
+        ),
       ),
     );
   }
 
   Widget _chatList(ZTheme t) {
     if (s.messages.isEmpty) {
-      return Center(child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('💬', style: TextStyle(fontSize: 48)),
-            const SizedBox(height: 12),
-            Text('ابدأ المحادثة\nجرّب: "السلام عليكم"',
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('💬', style: TextStyle(fontSize: 48)),
+              const SizedBox(height: 12),
+              Text(
+                'ابدأ المحادثة\nجرّب: "السلام عليكم"',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: t.textDim, fontSize: 14, height: 1.5)),
-          ],
+                style: TextStyle(color: t.textDim, fontSize: 14, height: 1.5),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
     }
 
     return ListView.builder(
@@ -559,13 +619,15 @@ class _ChatPageState extends State<ChatPage> {
         final m = s.messages[i];
         final isUser = m['sender'] == 'user';
         final ts = DateTime.fromMillisecondsSinceEpoch(m['ts'] ?? 0);
-        final time = '${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}';
+        final time =
+            '${ts.hour.toString().padLeft(2, '0')}:${ts.minute.toString().padLeft(2, '0')}';
 
         return Align(
           alignment: isUser ? Alignment.centerLeft : Alignment.centerRight,
           child: Container(
             margin: const EdgeInsets.only(bottom: 10),
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+            constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.82),
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
             decoration: BoxDecoration(
               gradient: isUser ? LinearGradient(colors: t.userBubble) : null,
@@ -580,16 +642,22 @@ class _ChatPageState extends State<ChatPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(m['text'] ?? '',
-                    style: TextStyle(
-                      color: isUser ? t.userText : t.botText,
-                      fontSize: 15, height: 1.55,
-                    )),
+                Text(
+                  m['text'] ?? '',
+                  style: TextStyle(
+                    color: isUser ? t.userText : t.botText,
+                    fontSize: 15,
+                    height: 1.55,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(time, style: TextStyle(
-                  fontSize: 10,
-                  color: isUser ? Colors.white70 : t.textMuted,
-                )),
+                Text(
+                  time,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isUser ? Colors.white70 : t.textMuted,
+                  ),
+                ),
               ],
             ),
           ),
@@ -599,48 +667,55 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _composer(ZTheme t) => Container(
-    padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + MediaQuery.of(context).padding.bottom),
-    decoration: BoxDecoration(
-      color: t.surface,
-      border: Border(top: BorderSide(color: t.border)),
-    ),
-    child: Row(children: [
-      Expanded(child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+        padding: EdgeInsets.fromLTRB(
+            12, 10, 12, 10 + MediaQuery.of(context).padding.bottom),
         decoration: BoxDecoration(
-          color: t.inputBg,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: t.border),
+          color: t.surface,
+          border: Border(top: BorderSide(color: t.border)),
         ),
-        child: TextField(
-          controller: _input,
-          maxLines: 4, minLines: 1,
-          style: TextStyle(color: t.text, fontSize: 15),
-          decoration: InputDecoration(
-            hintText: 'اكتب رسالتك...',
-            hintStyle: TextStyle(color: t.textMuted),
-            border: InputBorder.none,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-          onSubmitted: (_) => _send(),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: t.inputBg,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: t.border),
+                ),
+                child: TextField(
+                  controller: _input,
+                  maxLines: 4,
+                  minLines: 1,
+                  style: TextStyle(color: t.text, fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'اكتب رسالتك...',
+                    hintStyle: TextStyle(color: t.textMuted),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onSubmitted: (_) => _send(),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            InkWell(
+              onTap: _send,
+              borderRadius: BorderRadius.circular(50),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [t.primary2, t.primary]),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.send, color: Colors.white, size: 18),
+              ),
+            ),
+          ],
         ),
-      )),
-      const SizedBox(width: 8),
-      InkWell(
-        onTap: _send,
-        borderRadius: BorderRadius.circular(50),
-        child: Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [t.primary2, t.primary]),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.send, color: Colors.white, size: 18),
-        ),
-      ),
-    ]),
-  );
+      );
 
   void _openSettings() {
     final t = s.theme;
@@ -654,35 +729,68 @@ class _ChatPageState extends State<ChatPage> {
       builder: (_) => Directionality(
         textDirection: TextDirection.rtl,
         child: DraggableScrollableSheet(
-          expand: false, initialChildSize: 0.8, maxChildSize: 0.95,
+          expand: false,
+          initialChildSize: 0.8,
+          maxChildSize: 0.95,
           builder: (_, ctrl) => ListView(
             controller: ctrl,
             padding: const EdgeInsets.all(18),
             children: [
-              Center(child: Container(
-                width: 42, height: 4,
-                decoration: BoxDecoration(color: t.textMuted, borderRadius: BorderRadius.circular(2)),
-              )),
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: t.textMuted,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               Text('الإعدادات',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: t.text)),
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800, color: t.text)),
               const SizedBox(height: 16),
               _sectionTitle('الثيمات', t),
-              Wrap(spacing: 8, runSpacing: 8, children: kThemes.entries.map((e) => GestureDetector(
-                onTap: () { s.themeId = e.key; s.save(); setState(() {}); widget.onChanged(); },
-                child: Container(
-                  width: 90, height: 70,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [e.value.primary, e.value.primary2]),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: s.themeId == e.key ? t.text : Colors.transparent, width: 2),
-                  ),
-                  alignment: Alignment.bottomCenter,
-                  padding: const EdgeInsets.all(6),
-                  child: Text(e.value.name,
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
-                ),
-              )).toList()),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: kThemes.entries.map((e) {
+                  return GestureDetector(
+                    onTap: () {
+                      s.themeId = e.key;
+                      s.save();
+                      setState(() {});
+                      widget.onChanged();
+                    },
+                    child: Container(
+                      width: 90,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            colors: [e.value.primary, e.value.primary2]),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: s.themeId == e.key
+                              ? t.text
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      alignment: Alignment.bottomCenter,
+                      padding: const EdgeInsets.all(6),
+                      child: Text(
+                        e.value.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
               const SizedBox(height: 20),
               _sectionTitle('الشخصية', t),
               SizedBox(
@@ -692,13 +800,21 @@ class _ChatPageState extends State<ChatPage> {
                   itemCount: kChars.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (_, i) => GestureDetector(
-                    onTap: () { s.charId = i; s.save(); setState(() {}); widget.onChanged(); },
+                    onTap: () {
+                      s.charId = i;
+                      s.save();
+                      setState(() {});
+                      widget.onChanged();
+                    },
                     child: Container(
                       width: 70,
                       decoration: BoxDecoration(
                         color: t.surface2,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: s.charId == i ? t.primary : t.border, width: 2),
+                        border: Border.all(
+                          color: s.charId == i ? t.primary : t.border,
+                          width: 2,
+                        ),
                       ),
                       padding: const EdgeInsets.all(4),
                       child: CustomPaint(painter: _CharPainter(kChars[i])),
@@ -710,13 +826,21 @@ class _ChatPageState extends State<ChatPage> {
               _sectionTitle('الذاكرة', t),
               ListTile(
                 leading: Icon(Icons.info, color: t.primary),
-                title: Text('${s.engine.length} سؤال/جواب',
-                    style: TextStyle(color: t.text, fontSize: 13)),
+                title: Text(
+                  '${s.engine.length} سؤال/جواب',
+                  style: TextStyle(color: t.text, fontSize: 13),
+                ),
               ),
               ListTile(
                 leading: Icon(Icons.delete_forever, color: t.danger),
-                title: Text('مسح الذاكرة',
-                    style: TextStyle(color: t.danger, fontSize: 13, fontWeight: FontWeight.w700)),
+                title: Text(
+                  'مسح الذاكرة',
+                  style: TextStyle(
+                    color: t.danger,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 onTap: () {
                   s.engine.clear();
                   s.engine.seed();
@@ -727,15 +851,25 @@ class _ChatPageState extends State<ChatPage> {
               ),
               ListTile(
                 leading: Icon(Icons.restart_alt, color: t.danger),
-                title: Text('إعادة ضبط كامل',
-                    style: TextStyle(color: t.danger, fontSize: 13, fontWeight: FontWeight.w700)),
+                title: Text(
+                  'إعادة ضبط كامل',
+                  style: TextStyle(
+                    color: t.danger,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 onTap: () async {
                   await s.prefs.clear();
                   s.messages.clear();
                   s.engine.clear();
                   s.engine.seed();
-                  s.coins = 0; s.xp = 0; s.level = 1;
-                  s.likes = 0; s.dislikes = 0; s.questions = 0;
+                  s.coins = 0;
+                  s.xp = 0;
+                  s.level = 1;
+                  s.likes = 0;
+                  s.dislikes = 0;
+                  s.questions = 0;
                   s.userMemory.clear();
                   s.themeId = 'night';
                   s.charId = 0;
@@ -753,9 +887,16 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _sectionTitle(String text, ZTheme t) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: t.textDim)),
-  );
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: t.textDim,
+          ),
+        ),
+      );
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -776,9 +917,7 @@ class _CharPainter extends CustomPainter {
     final eye = Paint()..color = c.eye;
     final acc = Paint()..color = c.accessory;
     final white = Paint()..color = Colors.white;
-    final black = Paint()..color = Colors.black;
 
-    // Back hair
     final backHair = Path()
       ..moveTo(53, 78)
       ..cubicTo(37, 115, 32, 168, 47, 221)
@@ -786,6 +925,7 @@ class _CharPainter extends CustomPainter {
       ..cubicTo(63, 179, 61, 137, 68, 100)
       ..close();
     canvas.drawPath(backHair, hair);
+
     final backHair2 = Path()
       ..moveTo(147, 78)
       ..cubicTo(163, 115, 168, 168, 153, 221)
@@ -794,7 +934,6 @@ class _CharPainter extends CustomPainter {
       ..close();
     canvas.drawPath(backHair2, hair);
 
-    // Dress
     final dressPath = Path()
       ..moveTo(58, 158)
       ..cubicTo(74, 147, 126, 147, 142, 158)
@@ -803,18 +942,23 @@ class _CharPainter extends CustomPainter {
       ..close();
     canvas.drawPath(dressPath, dress);
 
-    // Neck
     canvas.drawRect(Rect.fromLTWH(89, 123, 22, 29), skin);
 
-    // Face
-    canvas.drawOval(Rect.fromCenter(center: const Offset(100, 95), width: 72, height: 84), skin);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(100, 95), width: 72, height: 84),
+      skin,
+    );
 
-    // Blush
-    final blush = Paint()..color = const Color(0xFFFF8FAB).withValues(alpha: 0.3);
-    canvas.drawOval(Rect.fromCenter(center: const Offset(79, 108), width: 16, height: 10), blush);
-    canvas.drawOval(Rect.fromCenter(center: const Offset(121, 108), width: 16, height: 10), blush);
+    final blush = Paint()..color = const Color(0xFFFF8FAB).withOpacity(0.3);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(79, 108), width: 16, height: 10),
+      blush,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(121, 108), width: 16, height: 10),
+      blush,
+    );
 
-    // Front hair
     final front = Path()
       ..moveTo(62, 76)
       ..cubicTo(66, 47, 82, 34, 100, 34)
@@ -824,16 +968,20 @@ class _CharPainter extends CustomPainter {
       ..close();
     canvas.drawPath(front, hair);
 
-    // Eyes
-    canvas.drawOval(Rect.fromCenter(center: const Offset(84, 89), width: 12, height: 10), white);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(84, 89), width: 12, height: 10),
+      white,
+    );
     canvas.drawCircle(const Offset(84, 89), 6.3, eye);
     canvas.drawCircle(const Offset(82, 86.5), 1.8, white);
 
-    canvas.drawOval(Rect.fromCenter(center: const Offset(116, 89), width: 12, height: 10), white);
+    canvas.drawOval(
+      Rect.fromCenter(center: const Offset(116, 89), width: 12, height: 10),
+      white,
+    );
     canvas.drawCircle(const Offset(116, 89), 6.3, eye);
     canvas.drawCircle(const Offset(114, 86.5), 1.8, white);
 
-    // Mouth
     final mouth = Paint()..color = const Color(0xFFC96A5E);
     final mouthPath = Path()
       ..moveTo(88, 117)
@@ -842,33 +990,14 @@ class _CharPainter extends CustomPainter {
       ..close();
     canvas.drawPath(mouthPath, mouth);
 
-    // Accessory
     final accPath = Path()
       ..moveTo(133, 46)
       ..quadraticBezierTo(140, 49, 147, 46)
       ..quadraticBezierTo(140, 58, 133, 46)
       ..close();
     canvas.drawPath(accPath, acc);
-
-    // Suppress unused warning
-    black.color = Colors.black.withValues(alpha: 0);
   }
 
   @override
   bool shouldRepaint(covariant _CharPainter old) => old.c.id != c.id;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Extension shim — withValues untuk Flutter lama
-// ═══════════════════════════════════════════════════════════════
-extension ColorShim on Color {
-  Color withValues({double? alpha}) {
-    if (alpha == null) return this;
-    return Color.fromRGBO(
-      ((value >> 16) & 0xFF).toDouble(),
-      ((value >> 8) & 0xFF).toDouble(),
-      (value & 0xFF).toDouble(),
-      alpha,
-    );
-  }
 }
